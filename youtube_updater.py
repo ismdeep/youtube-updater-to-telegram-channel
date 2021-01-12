@@ -2,7 +2,6 @@ import requests
 import json
 import sys
 import redis
-import asyncio
 
 from telethon.sync import TelegramClient
 from telethon import functions
