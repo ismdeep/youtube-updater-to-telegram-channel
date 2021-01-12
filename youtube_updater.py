@@ -27,7 +27,7 @@ api_id = telegram_bot_config['api_id']
 api_hash = telegram_bot_config['api_hash']
 channel_share_link = telegram_bot_config['channel_share_link']
 print(channel_share_link)
-client = TelegramClient('{}/anon.session'.format(WORK_DIR), api_id, api_hash)
+client = TelegramClient(WORK_DIR + '/anon.session', api_id, api_hash)
 client.connect()
 channel = client.get_entity(channel_share_link)
 
