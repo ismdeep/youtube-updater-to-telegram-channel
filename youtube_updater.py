@@ -26,10 +26,23 @@ telegram_bot_config = json.load(open(WORK_DIR + '/telegram_bot.json', 'r'))
 api_id = telegram_bot_config['api_id']
 api_hash = telegram_bot_config['api_hash']
 channel_share_link = telegram_bot_config['channel_share_link']
-print(channel_share_link)
 client = TelegramClient(WORK_DIR + '/anon.session', api_id, api_hash)
 client.connect()
 channel = client.get_entity(channel_share_link)
+
+
+class VideoInfo(object):
+    video_id = None
+    video_title = None
+    publish_time = None
+    
+    def __init__(self, __video_id__, __video_title__, __publish_time__):
+        self.video_id = __video_id__
+        self.video_title = __video_title__
+        self.publish_time = __publish_time__
+
+    def __str__(self):
+        return "[{}, {}, {}]".format(self.video_id, self.video_title, self.publish_time)
 
 
 def is_saved(__video_id__):
@@ -43,26 +56,28 @@ def push_to_redis(__video_id__, __title__):
 
 
 def get_latest_videos_from_channel(__channel_id__):
-    url = "{}/search?part=snippet&channelId={}&order=date&type=video&maxResults=50&key={}".format(
-        BASE, __channel_id__, APP_KEY)
-    latest_videos = json.loads(requests.get(url).text)
-    if len(latest_videos["items"]) > 0:
-        ids_list = ""
-        for item in latest_videos["items"]:
-            ids_list += item["id"]["videoId"] + ","
-        ids_list = ids_list[:-1]
-        video_detail_url = "{}/videos?id={}&part=contentDetails&key={}".format(BASE, ids_list, APP_KEY)
-        video_details = json.loads(requests.get(video_detail_url).text)
-        for i in range(len(video_details["items"])):
-            duration = video_details["items"][i]["contentDetails"]["duration"]
-            if 'S' not in duration:
-                duration += '0S'
-            if 'M' not in duration and 'H' in duration:
-                duration = duration[:duration.find('H') + 1] + '0M' + duration[duration.find('H') + 1:]
-            duration = duration.replace("H", ":").replace("M", ":").replace("S", "").replace("PT", "")
-            duration = ":".join([elem if len(elem) == 2 else "0" + elem for elem in duration.split(":")])
-            latest_videos["items"][i]["duration"] = duration
-        return latest_videos["items"]
+    try:
+        url = "{}/search?" \
+              "part=snippet" \
+              "&channelId={}" \
+              "&order=date" \
+              "&type=video" \
+              "&maxResults=50" \
+              "&key={}".format(BASE,
+                               __channel_id__,
+                               APP_KEY)
+        latest_videos = json.loads(requests.get(url).text)
+        videos = []
+        if len(latest_videos["items"]) > 0:
+            for item in latest_videos["items"]:
+                videos.append(VideoInfo(
+                    item["id"]["videoId"],
+                    item['snippet']['title'],
+                    item['snippet']['publishedAt']
+                ))
+        return videos
+    except:
+        return []
 
 
 def main():
@@ -75,19 +90,21 @@ def main():
                 channels_list.append(channel_id)
     for channel_id in channels_list:
         channel_latest_videos = get_latest_videos_from_channel(channel_id)
-        for item in channel_latest_videos:
-            title = item["snippet"]["title"]
-            video_id = item["id"]["videoId"]
-            video_url = "https://www.youtube.com/watch?v={}".format(video_id)
-            duration = item["duration"]
-            time_published = item["snippet"]["publishedAt"]
-            if not is_saved(video_id):
-                asyncio.run(client(functions.messages.SendMessageRequest(
+        # print(channel_id, len(channel_latest_video_ids))
+        for video in channel_latest_videos[::-1]:
+            print(video)
+            video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
+            if not is_saved(video.video_id):
+                client(functions.messages.SendMessageRequest(
                     peer=channel,
-                    message='{}\n\n{}\n\n{}'.format(title, time_published, video_url),
+                    message='{}\n\n{}\n\n{}'.format(
+                        video.video_title,
+                        video.publish_time,
+                        video_url
+                    ),
                     no_webpage=False
-                )))
-                push_to_redis(video_id, title)
+                ))
+                push_to_redis(video.video_id, video.video_title)
 
 
 if __name__ == "__main__":
