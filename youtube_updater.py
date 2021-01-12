@@ -4,7 +4,7 @@ import sys
 import redis
 
 from telethon.sync import TelegramClient
-from telethon import functions
+from telethon.sync import functions
 
 WORK_DIR = sys.argv[1]
 BASE = "https://www.googleapis.com/youtube/v3"
@@ -34,10 +34,12 @@ class VideoInfo(object):
     video_id = None
     video_title = None
     publish_time = None
-    
-    def __init__(self, __video_id__, __video_title__, __publish_time__):
+    channel_title = None
+
+    def __init__(self, __video_id__, __video_title__, __channel_title__, __publish_time__):
         self.video_id = __video_id__
         self.video_title = __video_title__
+        self.channel_title = __channel_title__
         self.publish_time = __publish_time__
 
     def __str__(self):
@@ -55,28 +57,28 @@ def push_to_redis(__video_id__, __title__):
 
 
 def get_latest_videos_from_channel(__channel_id__):
-    try:
-        url = "{}/search?" \
-              "part=snippet" \
-              "&channelId={}" \
-              "&order=date" \
-              "&type=video" \
-              "&maxResults=50" \
-              "&key={}".format(BASE,
-                               __channel_id__,
-                               APP_KEY)
-        latest_videos = json.loads(requests.get(url).text)
-        videos = []
-        if len(latest_videos["items"]) > 0:
-            for item in latest_videos["items"]:
-                videos.append(VideoInfo(
-                    item["id"]["videoId"],
-                    item['snippet']['title'],
-                    item['snippet']['publishedAt']
-                ))
-        return videos
-    except:
+    url = "{}/search?part=snippet" \
+          "&channelId={}" \
+          "&order=date" \
+          "&type=video" \
+          "&maxResults=25" \
+          "&key={}".format(BASE, __channel_id__, APP_KEY)
+    latest_videos = json.loads(requests.get(url).text)
+    if 'error' in latest_videos:
+        print(latest_videos['error'])
+        exit(0)
         return []
+    if 'items' not in latest_videos:
+        return []
+    videos = []
+    for item in latest_videos["items"]:
+        videos.append(VideoInfo(
+            item["id"]["videoId"],
+            item['snippet']['title'],
+            item['snippet']['channelTitle'],
+            item['snippet']['publishedAt']
+        ))
+    return videos
 
 
 def main():
@@ -89,14 +91,13 @@ def main():
                 channels_list.append(channel_id)
     for channel_id in channels_list:
         channel_latest_videos = get_latest_videos_from_channel(channel_id)
-        # print(channel_id, len(channel_latest_video_ids))
         for video in channel_latest_videos[::-1]:
-            print(video)
             video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
             if not is_saved(video.video_id):
                 client(functions.messages.SendMessageRequest(
                     peer=channel,
-                    message='{}\n\n{}\n\n{}'.format(
+                    message='【{}】 {}\n\n{}\n\n{}'.format(
+                        video.channel_title,
                         video.video_title,
                         video.publish_time,
                         video_url
