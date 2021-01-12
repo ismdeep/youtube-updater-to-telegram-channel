@@ -2,6 +2,7 @@ import requests
 import json
 import sys
 import redis
+import time
 
 from telethon.sync import TelegramClient
 from telethon.sync import functions
@@ -59,14 +60,12 @@ def push_to_redis(__video_id__, __title__):
 def get_latest_videos_from_channel(__channel_id__):
     url = "{}/search?part=snippet" \
           "&channelId={}" \
-          "&order=date" \
           "&type=video" \
-          "&maxResults=25" \
+          "&maxResults=10" \
           "&key={}".format(BASE, __channel_id__, APP_KEY)
     latest_videos = json.loads(requests.get(url).text)
     if 'error' in latest_videos:
         print(latest_videos['error'])
-        exit(0)
         return []
     if 'items' not in latest_videos:
         return []
@@ -81,7 +80,7 @@ def get_latest_videos_from_channel(__channel_id__):
     return videos
 
 
-def main():
+def load_channel_ids():
     channel_list_file_path = "{}/news_list.txt".format(WORK_DIR)
     channels_list = []
     with open(channel_list_file_path) as f:
@@ -89,22 +88,36 @@ def main():
             channel_id = line.split()[0].strip()
             if len(channel_id) > 0:
                 channels_list.append(channel_id)
-    for channel_id in channels_list:
-        channel_latest_videos = get_latest_videos_from_channel(channel_id)
-        for video in channel_latest_videos[::-1]:
-            video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
-            if not is_saved(video.video_id):
-                client(functions.messages.SendMessageRequest(
-                    peer=channel,
-                    message='【{}】 {}\n\n{}\n\n{}'.format(
-                        video.channel_title,
-                        video.video_title,
-                        video.publish_time,
-                        video_url
-                    ),
-                    no_webpage=False
-                ))
-                push_to_redis(video.video_id, video.video_title)
+    return channels_list
+
+
+def watch_channel(channel_id):
+    channel_latest_videos = []
+    while len(channel_latest_videos) <= 0:
+        get_latest_videos_from_channel(channel_id)
+        if len(channel_latest_videos) <= 0:
+            time.sleep(10)
+    for video in channel_latest_videos[::-1]:
+        video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
+        if not is_saved(video.video_id):
+            client(functions.messages.SendMessageRequest(
+                peer=channel,
+                message='【{}】 {}\n\n{}\n\n{}'.format(
+                    video.channel_title,
+                    video.video_title,
+                    video.publish_time,
+                    video_url
+                ),
+                no_webpage=False
+            ))
+            push_to_redis(video.video_id, video.video_title)
+
+
+def main():
+    channel_ids = load_channel_ids()
+    while True:
+        [watch_channel(channel_id) for channel_id in channel_ids]
+        time.sleep(10 * 60)  # 10 minutes
 
 
 if __name__ == "__main__":
