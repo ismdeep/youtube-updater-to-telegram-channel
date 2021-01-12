@@ -2,9 +2,44 @@ import requests
 import json
 import sys
 import os
+import redis
 
+from telethon.sync import TelegramClient
+from telethon import functions
+
+WORK_DIR = sys.argv[1]
 BASE = "https://www.googleapis.com/youtube/v3"
 APP_KEY = os.environ.get('YOUTUBE_APP_KEY')
+
+REDIS_KEY_NAME = 'youtube_videos'
+
+# 1. Get Redis Configuration
+redis_config = json.load(open(WORK_DIR + '/redis.json', 'r'))
+pool = redis.ConnectionPool(host=redis_config['host'], port=redis_config['port'])
+try:
+    redis.Redis(connection_pool=pool).ping()
+except Exception as e:
+    print(e)
+    exit(-1)
+
+# 2. Config Telegram Bot
+telegram_bot_config = json.load(open(WORK_DIR + '/telegram_bot.json', 'r'))
+api_id = telegram_bot_config['api_id']
+api_hash = telegram_bot_config['api_hash']
+channel_share_link = telegram_bot_config['channel_share_link']
+client = TelegramClient('{}/anon.session'.format(WORK_DIR), api_id, api_hash)
+client.connect()
+channel = client.get_entity(channel_share_link)
+
+
+def is_saved(__video_id__):
+    conn = redis.Redis(connection_pool=pool)
+    return conn.hexists(REDIS_KEY_NAME, __video_id__)
+
+
+def push_to_redis(__video_id__, __title__):
+    conn = redis.Redis(connection_pool=pool)
+    conn.hset(REDIS_KEY_NAME, __video_id__, __title__)
 
 
 def get_latest_videos_from_channel(__channel_id__):
@@ -31,12 +66,14 @@ def get_latest_videos_from_channel(__channel_id__):
 
 
 def main():
-    channel_list_file_path = sys.argv[1]
+    channel_list_file_path = "{}/news_list.txt".format(WORK_DIR)
     videos_list = []
     channels_list = []
     with open(channel_list_file_path) as f:
         for line in f:
-            channels_list.append(line.split()[0].strip())
+            channel_id = line.split()[0].strip()
+            if len(channel_id) > 0:
+                channels_list.append(channel_id)
 
     for channel_id in channels_list:
         channel_latest_videos = get_latest_videos_from_channel(channel_id)
@@ -47,6 +84,13 @@ def main():
             duration = item["duration"]
             time_published = item["snippet"]["publishedAt"]
             print(time_published, title, video_url, duration)
+            if not is_saved(video_id):
+                client(functions.messages.SendMessageRequest(
+                    peer=channel,
+                    message='{}\n\n{}\n\n{}'.format(title, time_published, video_url),
+                    no_webpage=False
+                ))
+                push_to_redis(video_id, title)
         videos_list += channel_latest_videos
 
 
