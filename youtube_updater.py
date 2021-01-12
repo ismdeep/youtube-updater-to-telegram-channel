@@ -2,6 +2,7 @@ import requests
 import json
 import sys
 import redis
+import asyncio
 
 from telethon.sync import TelegramClient
 from telethon import functions
@@ -25,6 +26,7 @@ telegram_bot_config = json.load(open(WORK_DIR + '/telegram_bot.json', 'r'))
 api_id = telegram_bot_config['api_id']
 api_hash = telegram_bot_config['api_hash']
 channel_share_link = telegram_bot_config['channel_share_link']
+print(channel_share_link)
 client = TelegramClient('{}/anon.session'.format(WORK_DIR), api_id, api_hash)
 client.connect()
 channel = client.get_entity(channel_share_link)
@@ -80,11 +82,11 @@ def main():
             duration = item["duration"]
             time_published = item["snippet"]["publishedAt"]
             if not is_saved(video_id):
-                client(functions.messages.SendMessageRequest(
+                asyncio.run(client(functions.messages.SendMessageRequest(
                     peer=channel,
                     message='{}\n\n{}\n\n{}'.format(title, time_published, video_url),
                     no_webpage=False
-                ))
+                )))
                 push_to_redis(video_id, title)
 
 
