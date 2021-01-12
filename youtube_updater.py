@@ -113,9 +113,7 @@ def watch_channel(channel_id):
 
 def main():
     channel_ids = load_channel_ids()
-    while True:
-        [watch_channel(channel_id) for channel_id in channel_ids]
-        time.sleep(10 * 60)  # 10 minutes
+    [watch_channel(channel_id) for channel_id in channel_ids]
 
 
 if __name__ == "__main__":
