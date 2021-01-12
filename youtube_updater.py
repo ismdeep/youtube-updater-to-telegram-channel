@@ -92,6 +92,7 @@ def load_channel_ids():
 
 
 def watch_channel(channel_id):
+    print(time.asctime(), channel_id)
     channel_latest_videos = []
     while len(channel_latest_videos) <= 0:
         get_latest_videos_from_channel(channel_id)
