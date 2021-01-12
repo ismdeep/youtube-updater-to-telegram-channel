@@ -93,11 +93,7 @@ def load_channel_ids():
 
 def watch_channel(channel_id):
     print(time.asctime(), channel_id)
-    channel_latest_videos = []
-    while len(channel_latest_videos) <= 0:
-        get_latest_videos_from_channel(channel_id)
-        if len(channel_latest_videos) <= 0:
-            time.sleep(10)
+    channel_latest_videos = get_latest_videos_from_channel(channel_id)
     for video in channel_latest_videos[::-1]:
         video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
         if not is_saved(video.video_id):
