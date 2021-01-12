@@ -60,6 +60,7 @@ def push_to_redis(__video_id__, __title__):
 def get_latest_videos_from_channel(__channel_id__):
     url = "{}/search?part=snippet" \
           "&channelId={}" \
+          "&order=date" \
           "&type=video" \
           "&maxResults=10" \
           "&key={}".format(BASE, __channel_id__, APP_KEY)
@@ -92,8 +93,8 @@ def load_channel_ids():
 
 
 def watch_channel(channel_id):
-    print(time.asctime(), channel_id)
     channel_latest_videos = get_latest_videos_from_channel(channel_id)
+    print(time.asctime(), channel_id, len(channel_latest_videos))
     for video in channel_latest_videos[::-1]:
         video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
         if not is_saved(video.video_id):
