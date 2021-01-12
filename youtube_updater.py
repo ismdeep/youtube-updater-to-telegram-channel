@@ -3,6 +3,7 @@ import json
 import sys
 import redis
 import time
+import random
 
 from telethon.sync import TelegramClient
 from telethon.sync import functions
@@ -113,6 +114,7 @@ def watch_channel(channel_id):
 
 def main():
     channel_ids = load_channel_ids()
+    random.shuffle(channel_ids)
     [watch_channel(channel_id) for channel_id in channel_ids]
 
 
