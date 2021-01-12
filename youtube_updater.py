@@ -1,7 +1,6 @@
 import requests
 import json
 import sys
-import os
 import redis
 
 from telethon.sync import TelegramClient
@@ -9,8 +8,7 @@ from telethon import functions
 
 WORK_DIR = sys.argv[1]
 BASE = "https://www.googleapis.com/youtube/v3"
-APP_KEY = os.environ.get('YOUTUBE_APP_KEY')
-
+APP_KEY = open("{}/youtube_app_key.txt".format(WORK_DIR), "r").readline().strip()
 REDIS_KEY_NAME = 'youtube_videos'
 
 # 1. Get Redis Configuration
@@ -67,14 +65,12 @@ def get_latest_videos_from_channel(__channel_id__):
 
 def main():
     channel_list_file_path = "{}/news_list.txt".format(WORK_DIR)
-    videos_list = []
     channels_list = []
     with open(channel_list_file_path) as f:
         for line in f:
             channel_id = line.split()[0].strip()
             if len(channel_id) > 0:
                 channels_list.append(channel_id)
-
     for channel_id in channels_list:
         channel_latest_videos = get_latest_videos_from_channel(channel_id)
         for item in channel_latest_videos:
@@ -83,7 +79,6 @@ def main():
             video_url = "https://www.youtube.com/watch?v={}".format(video_id)
             duration = item["duration"]
             time_published = item["snippet"]["publishedAt"]
-            print(time_published, title, video_url, duration)
             if not is_saved(video_id):
                 client(functions.messages.SendMessageRequest(
                     peer=channel,
@@ -91,7 +86,6 @@ def main():
                     no_webpage=False
                 ))
                 push_to_redis(video_id, title)
-        videos_list += channel_latest_videos
 
 
 if __name__ == "__main__":
