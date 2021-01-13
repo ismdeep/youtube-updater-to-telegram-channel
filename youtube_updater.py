@@ -3,14 +3,11 @@ import json
 import sys
 import redis
 import time
-import random
 
 from telethon.sync import TelegramClient
 from telethon.sync import functions
 
 WORK_DIR = sys.argv[1]
-BASE = "https://www.googleapis.com/youtube/v3"
-APP_KEY = open("{}/youtube_app_key.txt".format(WORK_DIR), "r").readline().strip()
 REDIS_KEY_NAME = 'youtube_videos'
 
 # 1. Get Redis Configuration
@@ -29,7 +26,19 @@ api_hash = telegram_bot_config['api_hash']
 channel_share_link = telegram_bot_config['channel_share_link']
 client = TelegramClient(WORK_DIR + '/anon.session', api_id, api_hash)
 client.connect()
-channel = client.get_entity(channel_share_link)
+telegram_channel = client.get_entity(channel_share_link)
+
+
+class ChannelInfo(object):
+    channel_id = None
+    channel_title = None
+
+    def __init__(self, __channel_id__, __channel_title__):
+        self.channel_id = __channel_id__
+        self.channel_title = __channel_title__
+
+    def __str__(self):
+        return "[{}, {}]".format(self.channel_id, self.channel_title)
 
 
 class VideoInfo(object):
@@ -59,63 +68,51 @@ def push_to_redis(__video_id__, __title__):
 
 
 def get_latest_videos_from_channel(__channel_id__):
-    url = "{}/search?part=snippet" \
-          "&channelId={}" \
-          "&order=date" \
-          "&type=video" \
-          "&maxResults=10" \
-          "&key={}".format(BASE, __channel_id__, APP_KEY)
-    latest_videos = json.loads(requests.get(url).text)
-    if 'error' in latest_videos:
-        print(latest_videos['error'])
-        return []
-    if 'items' not in latest_videos:
-        return []
-    videos = []
-    for item in latest_videos["items"]:
-        videos.append(VideoInfo(
-            item["id"]["videoId"],
-            item['snippet']['title'],
-            item['snippet']['channelTitle'],
-            item['snippet']['publishedAt']
-        ))
-    return videos
+    req = requests.get(url="https://www.youtube.com/channel/{}".format(__channel_id__))
+    content = req.text
+    content = content[content.find('''{"horizontalListRenderer":{"items":'''):]
+    video_ids = []
+    while content.find('''{"videoIds":["''') >= 0:
+        content = content[content.find('''{"videoIds":["''') + len('''{"videoIds":["'''):]
+        video_id = content[:content.find('''"''')]
+        video_ids.append(video_id)
+    return video_ids
 
 
-def load_channel_ids():
+def load_channels():
     channel_list_file_path = "{}/news_list.txt".format(WORK_DIR)
-    channels_list = []
+    channel_list = []
     with open(channel_list_file_path) as f:
         for line in f:
             channel_id = line.split()[0].strip()
             if len(channel_id) > 0:
-                channels_list.append(channel_id)
-    return channels_list
+                channel_list.append(ChannelInfo(
+                    channel_id,
+                    line[len(channel_id):].strip()
+                ))
+    return channel_list
 
 
-def watch_channel(channel_id):
-    channel_latest_videos = get_latest_videos_from_channel(channel_id)
-    print(time.asctime(), channel_id, len(channel_latest_videos))
-    for video in channel_latest_videos[::-1]:
-        video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
-        if not is_saved(video.video_id):
+def watch_channel(__channel__: ChannelInfo):
+    channel_latest_video_ids = get_latest_videos_from_channel(__channel__.channel_id)
+    print(time.asctime(), __channel__.channel_id, len(channel_latest_video_ids))
+    for video_id in channel_latest_video_ids:
+        video_url = "https://www.youtube.com/watch?v={}".format(video_id)
+        if not is_saved(video_id):
             client(functions.messages.SendMessageRequest(
-                peer=channel,
-                message='【{}】 {}\n\n{}\n\n{}'.format(
-                    video.channel_title,
-                    video.video_title,
-                    video.publish_time,
+                peer=telegram_channel,
+                message='【{}\n\n{}'.format(
+                    __channel__.channel_title,
                     video_url
                 ),
                 no_webpage=False
             ))
-            push_to_redis(video.video_id, video.video_title)
+            push_to_redis(video_id, __channel__.channel_id)
 
 
 def main():
-    channel_ids = load_channel_ids()
-    random.shuffle(channel_ids)
-    [watch_channel(channel_id) for channel_id in channel_ids]
+    channels = load_channels()
+    [watch_channel(channel) for channel in channels]
 
 
 if __name__ == "__main__":
