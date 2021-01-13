@@ -119,7 +119,7 @@ def watch_channel(__channel__: ChannelInfo):
             video_info = get_video_info(video_id)
             client(functions.messages.SendMessageRequest(
                 peer=telegram_channel,
-                message='【{}】[{}] {}\n\n{}'.format(
+                message='【{}】[{}] {}\n\n{}\n\n'.format(
                     __channel__.channel_title,
                     video_info.publish_time,
                     video_info.video_title,
