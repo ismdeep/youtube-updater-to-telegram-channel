@@ -45,13 +45,21 @@ class VideoInfo(object):
     video_id = None
     video_title = None
     publish_time = None
-    channel_title = None
 
-    def __init__(self, __video_id__, __video_title__, __channel_title__, __publish_time__):
+    def __init__(self):
+        pass
+
+    def set_video_id(self, __video_id__):
         self.video_id = __video_id__
+        return self
+
+    def set_video_title(self, __video_title__):
         self.video_title = __video_title__
-        self.channel_title = __channel_title__
+        return self
+
+    def set_publish_time(self, __publish_time__):
         self.publish_time = __publish_time__
+        return self
 
     def __str__(self):
         return "[{}, {}, {}]".format(self.video_id, self.video_title, self.publish_time)
@@ -67,16 +75,26 @@ def push_to_redis(__video_id__, __title__):
     conn.hset(REDIS_KEY_NAME, __video_id__, __title__)
 
 
-def get_latest_videos_from_channel(__channel_id__):
+def get_video_info(__video_id__) -> VideoInfo:
+    video_url = "https://www.youtube.com/watch?v={}".format(__video_id__)
+    content = requests.get(url=video_url).text
+    publish_time = content[content.find('''"publishDate":"''') + len('''"publishDate":"'''):]
+    publish_time = publish_time[:publish_time.find('''"''')]
+    title = content[content.find('''"><title>''') + len('''"><title>'''):]
+    title = title[:title.find(" - YouTube</title>")]
+    return VideoInfo().set_video_id(__video_id__).set_publish_time(publish_time).set_video_title(title)
+
+
+def get_latest_videos_from_channel(__channel_id__) -> [VideoInfo]:
     req = requests.get(url="https://www.youtube.com/channel/{}".format(__channel_id__))
     content = req.text
     content = content[content.find('''{"horizontalListRenderer":{"items":'''):]
-    video_ids = []
+    videos = []
     while content.find('''{"videoIds":["''') >= 0:
         content = content[content.find('''{"videoIds":["''') + len('''{"videoIds":["'''):]
         video_id = content[:content.find('''"''')]
-        video_ids.append(video_id)
-    return video_ids
+        videos.append(get_video_info(video_id))
+    return videos
 
 
 def load_channels():
@@ -94,20 +112,22 @@ def load_channels():
 
 
 def watch_channel(__channel__: ChannelInfo):
-    channel_latest_video_ids = get_latest_videos_from_channel(__channel__.channel_id)
-    print(time.asctime(), __channel__.channel_id, __channel__.channel_title, len(channel_latest_video_ids))
-    for video_id in channel_latest_video_ids:
-        video_url = "https://www.youtube.com/watch?v={}".format(video_id)
-        if not is_saved(video_id):
+    channel_latest_videos = get_latest_videos_from_channel(__channel__.channel_id)
+    print(time.asctime(), __channel__.channel_id, __channel__.channel_title, len(channel_latest_videos))
+    for video in channel_latest_videos:
+        video_url = "https://www.youtube.com/watch?v={}".format(video.video_id)
+        if not is_saved(video.video_id):
             client(functions.messages.SendMessageRequest(
                 peer=telegram_channel,
-                message='【{}】\n\n{}'.format(
+                message='【{}】[{}] {}\n\n{}'.format(
                     __channel__.channel_title,
+                    video.publish_time,
+                    video.video_title,
                     video_url
                 ),
                 no_webpage=False
             ))
-            push_to_redis(video_id, __channel__.channel_id)
+            push_to_redis(video.video_id, __channel__.channel_id)
 
 
 def main():
