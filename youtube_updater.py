@@ -95,13 +95,13 @@ def load_channels():
 
 def watch_channel(__channel__: ChannelInfo):
     channel_latest_video_ids = get_latest_videos_from_channel(__channel__.channel_id)
-    print(time.asctime(), __channel__.channel_id, len(channel_latest_video_ids))
+    print(time.asctime(), __channel__.channel_id, __channel__.channel_title, len(channel_latest_video_ids))
     for video_id in channel_latest_video_ids:
         video_url = "https://www.youtube.com/watch?v={}".format(video_id)
         if not is_saved(video_id):
             client(functions.messages.SendMessageRequest(
                 peer=telegram_channel,
-                message='【{}\n\n{}'.format(
+                message='【{}】\n\n{}'.format(
                     __channel__.channel_title,
                     video_url
                 ),
