@@ -10,6 +10,8 @@ from telethon.sync import functions
 WORK_DIR = sys.argv[1]
 REDIS_KEY_NAME = 'youtube_videos'
 
+save_only_flag = False
+
 # 1. Get Redis Configuration
 redis_config = json.load(open(WORK_DIR + '/redis.json', 'r'))
 pool = redis.ConnectionPool(host=redis_config['host'], port=redis_config['port'])
@@ -116,21 +118,31 @@ def watch_channel(__channel__: ChannelInfo):
     print(time.asctime(), __channel__.channel_id, __channel__.channel_title, len(channel_latest_video_ids))
     for video_id in channel_latest_video_ids:
         if not is_saved(video_id):
-            video_info = get_video_info(video_id)
-            client(functions.messages.SendMessageRequest(
-                peer=telegram_channel,
-                message='【{}】[{}] {}\n\n{}\n\n'.format(
-                    __channel__.channel_title,
-                    video_info.publish_time,
-                    video_info.video_title,
-                    "https://www.youtube.com/watch?v={}".format(video_id)
-                ),
-                no_webpage=False
-            ))
+            # If not save only, then we should push youtube update msg to telegram channel
+            if not save_only_flag:
+                video_info = get_video_info(video_id)
+                client(functions.messages.SendMessageRequest(
+                    peer=telegram_channel,
+                    message='【{}】[{}] {}\n\n{}\n\n'.format(
+                        __channel__.channel_title,
+                        video_info.publish_time,
+                        video_info.video_title,
+                        "https://www.youtube.com/watch?v={}".format(video_id)
+                    ),
+                    no_webpage=False
+                ))
             push_to_redis(video_id, __channel__.channel_id)
 
 
+def load_save_only_flag():
+    global save_only_flag
+    for item in sys.argv:
+        if item == '--save-only':
+            save_only_flag = True
+
+
 def main():
+    load_save_only_flag()
     channels = load_channels()
     [watch_channel(channel) for channel in channels]
 
