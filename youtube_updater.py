@@ -73,6 +73,7 @@ def is_saved(__video_id__):
 
 
 def push_to_redis(__video_id__, __title__):
+    print("Push {} to redis".format(__video_id__))
     conn = redis.Redis(connection_pool=pool)
     conn.hset(REDIS_KEY_NAME, __video_id__, __title__)
 
@@ -104,6 +105,9 @@ def load_channels():
     channel_list = []
     with open(channel_list_file_path) as f:
         for line in f:
+            line = line.strip()
+            if len(line.split()) <= 0:
+                continue
             channel_id = line.split()[0].strip()
             if len(channel_id) > 0:
                 channel_list.append(ChannelInfo(
