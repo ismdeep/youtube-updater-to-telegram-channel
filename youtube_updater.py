@@ -1,7 +1,8 @@
+import sqlite3
+
 import requests
 import json
 import sys
-import redis
 import time
 
 from telethon.sync import TelegramClient
@@ -12,14 +13,71 @@ REDIS_KEY_NAME = 'youtube_videos'
 
 save_only_flag = False
 
-# 1. Get Redis Configuration
-redis_config = json.load(open(WORK_DIR + '/redis.json', 'r'))
-pool = redis.ConnectionPool(host=redis_config['host'], port=redis_config['port'])
+
+class EasySqlite:
+    """
+    sqlite数据库操作工具类
+    database: 数据库文件地址，例如：db/mydb.db
+    """
+    _connection = None
+
+    def __init__(self, database):
+        # 连接数据库
+        self._connection = sqlite3.connect(database)
+
+    def _dict_factory(self, cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
+
+    def execute(self, sql, args=[], result_dict=True, commit=True) -> list:
+        """
+        执行数据库操作的通用方法
+        Args:
+        sql: sql语句
+        args: sql参数
+        result_dict: 操作结果是否用dict格式返回
+        commit: 是否提交事务
+        Returns:
+        list 列表，例如：
+        [{'id': 1, 'name': '张三'}, {'id': 2, 'name': '李四'}]
+        """
+        if result_dict:
+            self._connection.row_factory = self._dict_factory
+        else:
+            self._connection.row_factory = None
+        # 获取游标
+        _cursor = self._connection.cursor()
+        # 执行SQL获取结果
+        _cursor.execute(sql, args)
+        if commit:
+            self._connection.commit()
+        data = _cursor.fetchall()
+        _cursor.close()
+        return data
+
+    def insert(self, sql, args=[], commit=True):
+        # 获取游标
+        _cursor = self._connection.cursor()
+        # 执行SQL获取结果
+        _cursor.execute(sql, args)
+        if commit:
+            self._connection.commit()
+        data = _cursor.lastrowid
+        _cursor.close()
+        return data
+
+
+create_table_sql = '''create table t_videos (
+id INTEGER primary key AUTOINCREMENT not null,
+video_id text not null);'''
+
+db = EasySqlite("{}/data.db".format(WORK_DIR))
 try:
-    redis.Redis(connection_pool=pool).ping()
-except Exception as e:
-    print(e)
-    exit(-1)
+    db.execute("select count(id) from t_videos", result_dict=True)
+except:
+    db.execute(create_table_sql)
 
 # 2. Config Telegram Bot
 telegram_bot_config = json.load(open(WORK_DIR + '/telegram_bot.json', 'r'))
@@ -68,14 +126,14 @@ class VideoInfo(object):
 
 
 def is_saved(__video_id__):
-    conn = redis.Redis(connection_pool=pool)
-    return conn.hexists(REDIS_KEY_NAME, __video_id__)
+    result = db.execute("select count(id) as cnt from t_videos where video_id = '{}'".format(__video_id__))[0]['cnt']
+    result = int(result)
+    return True if result > 0 else False
 
 
-def push_to_redis(__video_id__, __title__):
-    print("Push {} to redis".format(__video_id__))
-    conn = redis.Redis(connection_pool=pool)
-    conn.hset(REDIS_KEY_NAME, __video_id__, __title__)
+def push_to_db(__video_id__, __title__):
+    print("Push {} to db".format(__video_id__))
+    db.insert("insert into t_videos (video_id) values('{}')".format(__video_id__))
 
 
 def get_video_info(__video_id__) -> VideoInfo:
@@ -135,7 +193,7 @@ def watch_channel(__channel__: ChannelInfo):
                     ),
                     no_webpage=False
                 ))
-            push_to_redis(video_id, __channel__.channel_id)
+            push_to_db(video_id, __channel__.channel_id)
 
 
 def load_save_only_flag():
