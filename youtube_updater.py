@@ -197,7 +197,7 @@ def watch_channel(__channel__: ChannelInfo):
                         ),
                         no_webpage=False
                     ))
-                    client.send_file(telegram_channel, "{}.mp3".format(video_id), voice_note=True)
+                    client.send_file(telegram_channel, "{}.mp3".format(video_id))
                     os.system("rm {}.mp3".format(video_id))
             push_to_db(video_id, __channel__.channel_id)
 
