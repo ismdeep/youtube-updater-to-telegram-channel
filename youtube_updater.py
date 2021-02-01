@@ -183,16 +183,17 @@ def watch_channel(__channel__: ChannelInfo):
             # If not save only, then we should push youtube update msg to telegram channel
             if not save_only_flag:
                 video_info = get_video_info(video_id)
-                client(functions.messages.SendMessageRequest(
-                    peer=telegram_channel,
-                    message='【{}】[{}] {}\n\n{}\n\n'.format(
-                        __channel__.channel_title,
-                        video_info.publish_time,
-                        video_info.video_title,
-                        "https://www.youtube.com/watch?v={}".format(video_id)
-                    ),
-                    no_webpage=False
-                ))
+                if video_info.publish_time >= '2021-01-01':
+                    client(functions.messages.SendMessageRequest(
+                        peer=telegram_channel,
+                        message='【{}】[{}] {}\n\n{}\n\n'.format(
+                            __channel__.channel_title,
+                            video_info.publish_time,
+                            video_info.video_title,
+                            "https://www.youtube.com/watch?v={}".format(video_id)
+                        ),
+                        no_webpage=False
+                    ))
             push_to_db(video_id, __channel__.channel_id)
 
 
