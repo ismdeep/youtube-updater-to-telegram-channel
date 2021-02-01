@@ -1,11 +1,9 @@
 import sqlite3
-
 import requests
 import json
 import sys
 import time
 import os
-
 
 from telethon.sync import TelegramClient
 from telethon.sync import functions
@@ -186,7 +184,9 @@ def watch_channel(__channel__: ChannelInfo):
             if not save_only_flag:
                 video_info = get_video_info(video_id)
                 if video_info.publish_time >= '2021-01-01':
-                    os.system("youtube-dl -x --audio-format mp3 https://www.youtube.com/watch?v={} -o {}.mp3".format(video_id, video_id))
+                    os.system(
+                        "youtube-dl -x --audio-format mp3 https://www.youtube.com/watch?v={} -o {}.mp3".format(video_id,
+                                                                                                               video_id))
                     client(functions.messages.SendMessageRequest(
                         peer=telegram_channel,
                         message='【{}】[{}] {}\n\n{}\n\n'.format(
