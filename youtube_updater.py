@@ -8,6 +8,11 @@ from utils.sqlite_util import EasySqlite
 from utils.config_utils import load_channels
 from utils.youtube_utils import download_mp3, remove_local_mp3
 from utils.telegram_utils import Telegram
+from utils.process_utils import is_other_running
+
+if is_other_running():
+    print('Other process is running. Exit...')
+    exit(0)
 
 content = codecs.open(sys.argv[1], 'r').read()
 config = json.loads(content)
