@@ -57,8 +57,10 @@ class EasySqlite:
         _cursor.close()
         return data
 
-    def insert(self, sql, args=[], commit=True):
+    def insert(self, sql, args=None, commit=True):
         # 获取游标
+        if args is None:
+            args = []
         _cursor = self._connection.cursor()
         # 执行SQL获取结果
         _cursor.execute(sql, args)
