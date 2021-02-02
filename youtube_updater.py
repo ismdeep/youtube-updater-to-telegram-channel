@@ -184,9 +184,6 @@ def watch_channel(__channel__: ChannelInfo):
             if not save_only_flag:
                 video_info = get_video_info(video_id)
                 if video_info.publish_time >= '2021-01-01':
-                    os.system(
-                        "youtube-dl -x --audio-format mp3 https://www.youtube.com/watch?v={} -o {}.mp3".format(video_id,
-                                                                                                               video_id))
                     client(functions.messages.SendMessageRequest(
                         peer=telegram_channel,
                         message='【{}】[{}] {}\n\n{}\n\n'.format(
@@ -197,8 +194,16 @@ def watch_channel(__channel__: ChannelInfo):
                         ),
                         no_webpage=False
                     ))
-                    client.send_file(telegram_channel, "{}.mp3".format(video_id), voice_note=True)
-                    os.system("rm {}.mp3".format(video_id))
+                    try:
+                        os.system(
+                            "youtube-dl "
+                            "-x "
+                            "--audio-format mp3 "
+                            "https://www.youtube.com/watch?v={} -o {}.mp3".format(video_id, video_id))
+                        client.send_file(telegram_channel, "{}.mp3".format(video_id), voice_note=True)
+                        os.system("rm {}.mp3".format(video_id))
+                    except:
+                        pass
             push_to_db(video_id, __channel__.channel_id)
 
 
