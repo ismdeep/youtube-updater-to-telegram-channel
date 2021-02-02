@@ -1,19 +1,13 @@
-import json
 import sys
 import time
-
-from telethon.sync import TelegramClient
-from telethon.sync import functions
 
 from utils.youtube_utils import ChannelInfo, get_video_info, get_latest_video_ids_from_channel
 from utils.sqlite_util import EasySqlite
 from utils.config_utils import load_channels
 from utils.youtube_utils import download_mp3, remove_local_mp3
+from utils.telegram_utils import Telegram
 
 WORK_DIR = sys.argv[1]
-REDIS_KEY_NAME = 'youtube_videos'
-
-save_only_flag = False
 
 create_table_sql = '''create table t_videos (
 id INTEGER primary key AUTOINCREMENT not null,
@@ -26,13 +20,8 @@ except:
     db.execute(create_table_sql)
 
 # 2. Config Telegram Bot
-telegram_bot_config = json.load(open(WORK_DIR + '/telegram_bot.json', 'r'))
-api_id = telegram_bot_config['api_id']
-api_hash = telegram_bot_config['api_hash']
-channel_share_link = telegram_bot_config['channel_share_link']
-client = TelegramClient(WORK_DIR + '/anon.session', api_id, api_hash)
-client.connect()
-telegram_channel = client.get_entity(channel_share_link)
+telegram = Telegram()
+telegram.load_config(WORK_DIR + '/telegram_bot.json')
 
 channel_list_file_path = "{}/news_list.txt".format(WORK_DIR)
 
@@ -58,34 +47,22 @@ def watch_channel(__channel__: ChannelInfo):
             if video_info.is_at_premiere:
                 continue
             if video_info.publish_time >= '2021-01-01':
-                client(functions.messages.SendMessageRequest(
-                    peer=telegram_channel,
-                    message='【{}】[{}] {}\n\n{}\n\n'.format(
-                        __channel__.channel_title,
-                        video_info.publish_time,
-                        video_info.video_title,
-                        "https://www.youtube.com/watch?v={}".format(video_id)
-                    ),
-                    no_webpage=False
-                ))
+                video_url = "https://www.youtube.com/watch?v={}".format(video_id)
+                caption = '【{}】[{}] {}'.format(__channel__.channel_title,
+                                               video_info.publish_time,
+                                               video_info.video_title)
+                msg = '{}\n\n{}\n\n'.format(caption, video_url)
+                telegram.send_msg(msg)
                 try:
                     download_mp3(video_id)
-                    client.send_file(telegram_channel, "{}.mp3".format(video_id), caption=video_info.video_title)
+                    telegram.send_mp3_file("{}.mp3".format(video_id), caption)
                     remove_local_mp3(video_id)
                 except:
                     pass
             push_to_db(video_id, __channel__.channel_id)
 
 
-def load_save_only_flag():
-    global save_only_flag
-    for item in sys.argv:
-        if item == '--save-only':
-            save_only_flag = True
-
-
 def main():
-    load_save_only_flag()
     channels = load_channels(channel_list_file_path)
     [watch_channel(channel) for channel in channels]
 

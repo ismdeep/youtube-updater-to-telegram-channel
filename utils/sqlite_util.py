@@ -18,7 +18,7 @@ class EasySqlite:
             d[col[0]] = row[idx]
         return d
 
-    def execute(self, sql, args=[], result_dict=True, commit=True) -> list:
+    def execute(self, sql, args=None, result_dict=True, commit=True) -> list:
         """
         执行数据库操作的通用方法
         Args:
@@ -30,6 +30,8 @@ class EasySqlite:
         list 列表，例如：
         [{'id': 1, 'name': '张三'}, {'id': 2, 'name': '李四'}]
         """
+        if args is None:
+            args = []
         if result_dict:
             self._connection.row_factory = self._dict_factory
         else:
