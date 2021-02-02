@@ -200,7 +200,7 @@ def watch_channel(__channel__: ChannelInfo):
                             "-x "
                             "--audio-format mp3 "
                             "https://www.youtube.com/watch?v={} -o {}.mp3".format(video_id, video_id))
-                        client.send_file(telegram_channel, "{}.mp3".format(video_id), voice_note=True)
+                        client.send_file(telegram_channel, "{}.mp3".format(video_id), caption=video_info.video_title)
                         os.system("rm {}.mp3".format(video_id))
                     except:
                         pass
