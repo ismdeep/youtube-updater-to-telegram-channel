@@ -196,7 +196,7 @@ def watch_channel(__channel__: ChannelInfo):
                     ))
                     try:
                         os.system(
-                            "youtube-dl "
+                            "/usr/local/bin/youtube-dl "
                             "-x "
                             "--audio-format mp3 "
                             "https://www.youtube.com/watch?v={} -o {}.mp3".format(video_id, video_id))
