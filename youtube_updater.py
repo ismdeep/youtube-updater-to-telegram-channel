@@ -1,5 +1,7 @@
 import sys
 import time
+import json
+import codecs
 
 from utils.youtube_utils import ChannelInfo, get_video_info, get_latest_video_ids_from_channel
 from utils.sqlite_util import EasySqlite
@@ -7,13 +9,14 @@ from utils.config_utils import load_channels
 from utils.youtube_utils import download_mp3, remove_local_mp3
 from utils.telegram_utils import Telegram
 
-WORK_DIR = sys.argv[1]
+content = codecs.open(sys.argv[1], 'r').read()
+config = json.loads(content)
 
 create_table_sql = '''create table t_videos (
 id INTEGER primary key AUTOINCREMENT not null,
 video_id text not null);'''
 
-db = EasySqlite("{}/data.db".format(WORK_DIR))
+db = EasySqlite(config['db'])
 try:
     db.execute("select count(id) from t_videos", result_dict=True)
 except:
@@ -21,9 +24,9 @@ except:
 
 # 2. Config Telegram Bot
 telegram = Telegram()
-telegram.load_config(WORK_DIR + '/telegram_bot.json')
+telegram.load_config(config['telegram_config'])
 
-channel_list_file_path = "{}/news_list.txt".format(WORK_DIR)
+channel_list_file_path = config['channel']
 
 
 def is_saved(__video_id__):
@@ -54,7 +57,7 @@ def watch_channel(__channel__: ChannelInfo):
                 msg = '{}\n\n{}\n\n'.format(caption, video_url)
                 telegram.send_msg(msg)
                 try:
-                    download_mp3(video_id)
+                    download_mp3(config['youtube-dl'], video_id)
                     telegram.send_mp3_file("{}.mp3".format(video_id), caption)
                     remove_local_mp3(video_id)
                 except:

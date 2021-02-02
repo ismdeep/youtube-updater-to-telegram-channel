@@ -33,15 +33,15 @@ def remove_local_mp3(__video_id__):
         os.remove(file_name)
 
 
-def download_mp3(__video_id__):
+def download_mp3(__youtube_dl__, __video_id__):
     os.system(
-        "youtube-dl "
+        "{} "
         "-x "
         "--audio-format mp3 "
         "https://www.youtube.com/watch?v={} "
         "-o {}.mp3 "
         ">/dev/null "
-        "2>/dev/null".format(__video_id__, __video_id__))
+        "2>/dev/null".format(__youtube_dl__, __video_id__, __video_id__))
 
 
 def get_video_info(__video_id__) -> VideoInfo:

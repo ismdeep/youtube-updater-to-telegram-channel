@@ -8,14 +8,14 @@ class TestDownloadMethod(unittest.TestCase):
     def test_download_mp3(self):
         video_id = "eK7lZJLdBfQ"
         remove_local_mp3(video_id)
-        download_mp3(video_id)
+        download_mp3('/usr/local/bin/youtube-dl', video_id)
         self.assertTrue(os.path.exists("{}.mp3".format(video_id)))
         remove_local_mp3(video_id)
 
     def test_remove_local_mp3(self):
         video_id = "eK7lZJLdBfQ"
         remove_local_mp3(video_id)
-        download_mp3(video_id)
+        download_mp3('/usr/local/bin/youtube-dl', video_id)
         self.assertTrue(os.path.exists("{}.mp3".format(video_id)))
         remove_local_mp3(video_id)
         self.assertFalse(os.path.exists("{}.mp3".format(video_id)))
