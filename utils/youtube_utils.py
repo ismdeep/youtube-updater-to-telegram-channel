@@ -64,7 +64,7 @@ def get_video_info(__video_id__) -> VideoInfo:
                           'Safari/537.36'
         }
     ).text
-    is_at_premiere_flag = content.find("Premiere in progress.") >= 0
+    is_at_premiere_flag = content.find("Premiere in progress.") >= 0 or content.find("Premieres in") >= 0
     publish_time = content[content.find('''"publishDate":"''') + len('''"publishDate":"'''):]
     publish_time = publish_time[:publish_time.find('''"''')]
     title = content[content.find('''"><title>''') + len('''"><title>'''):]
