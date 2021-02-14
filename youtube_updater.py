@@ -56,6 +56,7 @@ def watch_channel(__channel__: ChannelInfo):
                 continue
             if video_info.publish_time >= '2021-01-01':
                 video_url = "https://www.youtube.com/watch?v={}".format(video_id)
+                print(video_url)
                 caption = '【{}】[{}] {}'.format(__channel__.channel_title,
                                                video_info.publish_time,
                                                video_info.video_title)
