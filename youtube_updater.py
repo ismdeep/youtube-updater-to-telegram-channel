@@ -60,22 +60,15 @@ def watch_channel(__channel__: ChannelInfo):
                 caption = '【{}】[{}] {}'.format(__channel__.channel_title,
                                                video_info.publish_time,
                                                video_info.video_title)
-                print('-' * 80)
-                print('caption:')
-                print(caption)
                 msg = '{}\n\n{}\n\n'.format(caption, video_url)
-                print('-' * 80)
-                print('msg:')
-                print(msg)
-                print('-' * 80)
-                telegram.send_msg(msg)
                 try:
+                    telegram.send_msg(msg)
                     download_mp3(config['youtube-dl'], video_id)
                     telegram.send_mp3_file("{}.mp3".format(video_id), caption)
                     remove_local_mp3(video_id)
+                    push_to_db(video_id, __channel__.channel_id)
                 except:
                     pass
-            push_to_db(video_id, __channel__.channel_id)
 
 
 def main():
