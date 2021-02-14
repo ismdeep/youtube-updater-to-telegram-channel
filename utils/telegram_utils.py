@@ -26,6 +26,7 @@ class Telegram(object):
         self.channel = self.client.get_entity(channel_share_link)
 
     def send_msg(self, msg):
+        print(len(msg))
         self.client(functions.messages.SendMessageRequest(
             peer=self.channel,
             message=msg,
