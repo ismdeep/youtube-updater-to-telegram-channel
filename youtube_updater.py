@@ -61,6 +61,7 @@ def watch_channel(__channel__: ChannelInfo):
                                                video_info.publish_time,
                                                video_info.video_title)
                 msg = '{}\n\n{}\n\n'.format(caption, video_url)
+                print(msg)
                 telegram.send_msg(msg)
                 try:
                     download_mp3(config['youtube-dl'], video_id)
