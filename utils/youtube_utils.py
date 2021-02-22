@@ -64,6 +64,7 @@ def get_video_info(__video_id__) -> VideoInfo:
                           'Safari/537.36'
         }
     ).text
+    print(content)
     is_at_premiere_flag = content.find("Premiere in progress.") >= 0 or content.find("Premieres in") >= 0
     publish_time = content[content.find('''"publishDate":"''') + len('''"publishDate":"'''):]
     publish_time = publish_time[:publish_time.find('''"''')]
@@ -80,6 +81,7 @@ def get_video_info(__video_id__) -> VideoInfo:
 def get_latest_video_ids_from_channel(__channel_id__):
     req = requests.get(url="https://www.youtube.com/channel/{}".format(__channel_id__))
     content = req.text
+    print(content)
     content = content[content.find('''{"horizontalListRenderer":{"items":'''):]
     video_ids = []
     while content.find('''{"videoIds":["''') >= 0:
