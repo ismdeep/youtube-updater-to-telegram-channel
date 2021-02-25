@@ -3,10 +3,9 @@ import time
 import json
 import codecs
 
-from utils.youtube_utils import ChannelInfo, get_video_info, get_latest_video_ids_from_channel
+from utils.youtube_utils import ChannelInfo, get_latest_videos
 from utils.sqlite_util import EasySqlite
 from utils.config_utils import load_channels
-from utils.youtube_utils import download_mp3, remove_local_mp3
 from utils.telegram_utils import Telegram
 from utils.process_utils import is_other_running
 
@@ -46,29 +45,20 @@ def push_to_db(__video_id__, __title__):
 
 
 def watch_channel(__channel__: ChannelInfo):
-    channel_latest_video_ids = get_latest_video_ids_from_channel(__channel__.channel_id)
-    print(time.asctime(), __channel__.channel_id, __channel__.channel_title, len(channel_latest_video_ids))
-    for video_id in channel_latest_video_ids:
-        if not is_saved(video_id):
-            video_info = get_video_info(video_id)
-            # 跳过预播视频
-            if video_info.is_at_premiere:
-                continue
-            if video_info.publish_time >= '2021-01-01':
-                video_url = "https://www.youtube.com/watch?v={}".format(video_id)
-                print(video_url)
-                caption = '【{}】[{}] {}'.format(__channel__.channel_title,
-                                               video_info.publish_time,
-                                               video_info.video_title)
-                msg = '{}\n\n{}\n\n'.format(caption, video_url)
-                try:
-                    telegram.send_msg(msg)
-                    download_mp3(config['youtube-dl'], video_id)
-                    telegram.send_mp3_file("{}.mp3".format(video_id), caption)
-                    remove_local_mp3(video_id)
-                    push_to_db(video_id, __channel__.channel_id)
-                except:
-                    pass
+    videos = get_latest_videos(__channel__.channel_id)
+    print(time.asctime(), __channel__.channel_id, __channel__.channel_title, len(videos))
+    print(videos)
+    for video in videos:
+        if not is_saved(video['id']):
+            caption = '【{}】{}'.format(__channel__.channel_title,
+                                      video['title'])
+            video_url = "https://www.youtube.com/watch?v={}".format(video['id'])
+            msg = '{}\n\n{}\n\n'.format(caption, video_url)
+            try:
+                telegram.send_msg(msg)
+                push_to_db(video['id'], __channel__.channel_id)
+            except:
+                pass
 
 
 def main():

@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 
 
 class VideoInfo(object):
@@ -78,14 +79,34 @@ def get_video_info(__video_id__) -> VideoInfo:
     return video_info
 
 
-def get_latest_video_ids_from_channel(__channel_id__):
+def get_all_videos(data, videos: []):
+    if isinstance(data, dict) and 'gridVideoRenderer' in data:
+        videos.append(data)
+    elif isinstance(data, list):
+        for item in data:
+            get_all_videos(item, videos)
+    elif isinstance(data, dict):
+        for key in data:
+            get_all_videos(data[key], videos)
+    else:
+        pass
+
+
+def get_latest_videos(__channel_id__):
     req = requests.get(url="https://www.youtube.com/channel/{}".format(__channel_id__))
     content = req.text
-    print(content)
-    content = content[content.find('''{"horizontalListRenderer":{"items":'''):]
-    video_ids = []
-    while content.find('''{"videoIds":["''') >= 0:
-        content = content[content.find('''{"videoIds":["''') + len('''{"videoIds":["'''):]
-        video_id = content[:content.find('''"''')]
-        video_ids.append(video_id)
-    return video_ids
+    data = None
+    for item in content.splitlines():
+        if item.find('var ytInitialData =') >= 0:
+            item = item[item.find('var ytInitialData =') + len('var ytInitialData ='):]
+            item = item[:item.find(';</script><link')]
+            data = json.loads(item)
+    videos = []
+    get_all_videos(data, videos)
+    results = []
+    for video in videos:
+        results.append({
+            'id': video['gridVideoRenderer']['videoId'],
+            'title': video['gridVideoRenderer']['title']['simpleText']
+        })
+    return results
